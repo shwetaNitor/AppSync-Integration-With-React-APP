@@ -1,0 +1,38 @@
+type Query {
+    getTodo(id: String!): Todo!
+	allTodos: [Todo]
+}
+
+type Subscription {
+    addedTodo: Todo
+    @aws_subscribe(mutations: ["addTodo"])
+    updatedTodo: Todo
+    @aws_subscribe(mutations: ["updateTodo"])
+    deletedTodo: Todo
+    @aws_subscribe(mutations: ["deleteTodo"])
+}
+
+type Mutation {
+    addTodo(input: TodoInput): Todo!
+    
+    updateTodo( id: String!, input: TodoInput ): Todo
+    
+    deleteTodo(id: String!): String!
+}
+
+input TodoInput {
+    text: String,
+    checked: Boolean
+}
+
+type Todo {
+	id: String!
+    text: String
+    checked: Boolean
+}
+
+schema {
+    query: Query
+    mutation: Mutation
+    subscription: Subscription
+}

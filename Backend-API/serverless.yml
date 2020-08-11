@@ -1,0 +1,86 @@
+service: appsync 
+
+plugins:
+   - serverless-appsync-plugin
+   - serverless-pseudo-parameters
+
+provider:
+  name: aws
+  runtime: python3.8
+  region: 'ap-south-1'
+  profile: 'serverless-amplify-user'
+  environment:
+    DYNAMODB_TABLE: appsync-todo-table
+
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "dynamodb:*"
+      Resource: "arn:aws:dynamodb:#{AWS::Region}:*:table/${self:custom.IMAGE_TABLE}"
+
+custom:      
+  IMAGE_TABLE: appsync-todo-table
+  BUCKET_NAME: appsync-bucket
+
+  appSync:
+    name:  appsync
+    schema: schema.graphql
+    authenticationType: API_KEY
+    mappingTemplates:
+      - dataSource: lambdaDatasource
+        type: Query
+        field: getTodo
+        request: getTodo-request-mapping-template.vtl
+        response: common-response-mapping-template.vtl
+      - dataSource: lambdaDatasource
+        type: Query
+        field: allTodos
+        request: allTodos-request-mapping-template.vtl
+        response: common-response-mapping-template.vtl
+      - dataSource: lambdaDatasource
+        type: Mutation
+        field: addTodo
+        request: addTodo-request-mapping-template.vtl
+        response: common-response-mapping-template.vtl
+      - dataSource: lambdaDatasource
+        type: Mutation
+        field: updateTodo
+        request: updateTodo-request-mapping-template.vtl
+        response: common-response-mapping-template.vtl
+      - dataSource: lambdaDatasource
+        type: Mutation
+        field: deleteTodo
+        request: deleteTodo-request-mapping-template.vtl
+        response: common-response-mapping-template.vtl
+    dataSources:
+      - type: AWS_LAMBDA
+        name: lambdaDatasource
+        description: 'Lambda DataSource'
+        config:
+          functionName: graphql
+          iamRoleStatements: 
+            - Effect: "Allow"
+              Action:
+                - "lambda:invokeFunction"
+                - "sts:AssumeRole"
+              Resource:
+                - "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-dev-graphql"
+                - "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-dev-graphql:*"
+
+functions:
+  graphql:
+    handler: handler.graphql
+
+resources:
+  Resources:
+    ImageTable:
+      Type: "AWS::DynamoDB::Table"
+      Properties:
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        BillingMode: PAY_PER_REQUEST
+        TableName: ${self:custom.IMAGE_TABLE} 
